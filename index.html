@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <script src=https://telegram.org/js/telegram-web-app.js></script>
+
+    <style>
+
+        body { font-family: sans-serif; text-align: center; background: #f4f4f4; padding: 20px; }
+
+        .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
+
+        .day { padding: 15px; border-radius: 8px; background: white; cursor: pointer; border: 1px solid #ddd; }
+
+        .sw { background: #4caf50; color: white; } /* Verde = Smart Working */
+
+        .office { background: #2196f3; color: white; } /* Blu = Ufficio */
+
+    </style>
+
+</head>
+
+<body>
+
+    <h2>📅 Calendario SW</h2>
+
+    <p>Clicca sui giorni per cambiare stato</p>
+
+    <div class="day-grid" id="grid"></div>
+
+    <script>
+
+        const tg = window.Telegram.WebApp;
+
+        tg.expand();
+
+        const grid = document.getElementById('grid');
+
+        for (let i = 1; i <= 31; i++) {
+
+            let d = document.createElement('div');
+
+            d.className = 'day';
+
+            d.innerText = i;
+
+            d.onclick = () => {
+
+                if (d.classList.contains('sw')) { d.className = 'day office'; }
+
+                else if (d.classList.contains('office')) { d.className = 'day'; }
+
+                else { d.className = 'day sw'; }
+
+            };
+
+            grid.appendChild(d);
+
+        }
+
+    </script>
+
+</body>
+
+</html>
