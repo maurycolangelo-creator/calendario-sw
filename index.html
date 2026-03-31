@@ -6,25 +6,30 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         body { font-family: sans-serif; margin: 0; padding: 10px; background: #f4f7f9; }
-        h3 { color: #0088cc; text-align: center; margin-bottom: 10px; }
+        .nav-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .btn-nav { background: #0088cc; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; }
         .table-container { overflow-x: auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        table { border-collapse: collapse; width: 100%; white-space: nowrap; }
-        th, td { border: 1px solid #eee; padding: 12px; text-align: center; font-size: 0.9em; }
-        th { background: #0088cc; color: white; position: sticky; top: 0; }
-        .name-col { font-weight: bold; text-align: left; background: #f9f9f9; position: sticky; left: 0; z-index: 1; }
-        .cell-u { background: #c6efce; color: #006100; cursor: pointer; font-weight: bold; }
-        .cell-sw { background: #ddebf7; color: #1f4e78; cursor: pointer; font-weight: bold; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #eee; padding: 10px; text-align: center; }
+        th { background: #0088cc; color: white; }
+        .name-col { font-weight: bold; text-align: left; background: #f9f9f9; position: sticky; left: 0; }
+        .cell-u { background: #c6efce; color: #006100; font-weight: bold; }
+        .cell-sw { background: #ddebf7; color: #1f4e78; font-weight: bold; }
     </style>
 </head>
 <body>
-    <h3>📅 Turni QTZ - Marzo 2026</h3>
+    <div class="nav-controls">
+        <button class="btn-nav" onclick="cambiaSettimana(-1)">◀ Indietro</button>
+        <h3 id="current-month">Marzo 2026</h3>
+        <button class="btn-nav" onclick="cambiaSettimana(1)">Avanti ▶</button>
+    </div>
+
     <div class="table-container">
         <table>
             <thead>
-                <tr>
+                <tr id="header-row">
                     <th class="name-col">Nome</th>
-                    <th>02 Lu</th><th>03 Ma</th><th>04 Me</th><th>05 Gi</th><th>06 Ve</th>
-                </tr>
+                    </tr>
             </thead>
             <tbody id="table-body"></tbody>
         </table>
@@ -32,42 +37,48 @@
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand();
-
         const nomi = ["Michy", "Maury", "Claudia", "Morena", "Danilù"];
-        const giorni = ["02 Lu", "03 Ma", "04 Me", "05 Gi", "06 Ve"];
-        const turniBase = {
-            "Michy": ["SW", "U", "U", "U", "U"],
-            "Maury": ["U", "SW", "U", "U", "U"],
-            "Claudia": ["U", "U", "SW", "U", "U"],
-            "Morena": ["U", "U", "U", "SW", "U"],
-            "Danilù": ["U", "U", "U", "U", "SW"]
-        };
+        let dataInizio = new Date(2026, 2, 2); // 2 Marzo 2026
 
-        const tbody = document.getElementById('table-body');
-        nomi.forEach(nome => {
-            let row = `<tr><td class="name-col">${nome}</td>`;
-            turniBase[nome].forEach((turno, index) => {
-                let classe = turno === "U" ? "cell-u" : "cell-sw";
-                row += `<td class="${classe}" onclick="cambiaEInvia(this, '${nome}', '${giorni[index]}')">${turno}</td>`;
-            });
-            row += "</tr>";
-            tbody.innerHTML += row;
-        });
+        function renderingTabella() {
+            const headerRow = document.getElementById('header-row');
+            const tableBody = document.getElementById('table-body');
+            headerRow.innerHTML = '<th class="name-col">Nome</th>';
+            tableBody.innerHTML = '';
 
-        function cambiaEInvia(cell, nome, giorno) {
-            // Cambia visivamente
-            if (cell.innerText === "U") {
-                cell.innerText = "SW";
-                cell.className = "cell-sw";
-            } else {
-                cell.innerText = "U";
-                cell.className = "cell-u";
+            // Genera 5 giorni lavorativi
+            let giorniSettimana = [];
+            for(let i=0; i<5; i++) {
+                let d = new Date(dataInizio);
+                d.setDate(d.getDate() + i);
+                giorniSettimana.push(d.toLocaleDateString('it-IT', {day:'2-digit', weekday:'short'}));
+                headerRow.innerHTML += `<th>${giorniSettimana[i]}</th>`;
             }
-            // Invia i dati al Bot Python
-            const info = { utente: nome, giorno: giorno, scelta: cell.innerText };
-            tg.sendData(JSON.stringify(info)); 
+
+            nomi.forEach(nome => {
+                let row = `<tr><td class="name-col">${nome}</td>`;
+                for(let i=0; i<5; i++) {
+                    row += `<td class="cell-u" onclick="inviaModifica('${nome}', '${giorniSettimana[i]}', this)">U</td>`;
+                }
+                row += "</tr>";
+                tableBody.innerHTML += row;
+            });
         }
+
+        function cambiaSettimana(direzione) {
+            dataInizio.setDate(dataInizio.getDate() + (direzione * 7));
+            renderingTabella();
+        }
+
+        function inviaModifica(nome, giorno, cell) {
+            let nuovoStato = cell.innerText === "U" ? "SW" : "U";
+            cell.innerText = nuovoStato;
+            cell.className = nuovoStato === "U" ? "cell-u" : "cell-sw";
+            
+            tg.sendData(JSON.stringify({utente: nome, giorno: giorno, scelta: nuovoStato}));
+        }
+
+        renderingTabella();
     </script>
 </body>
 </html>
