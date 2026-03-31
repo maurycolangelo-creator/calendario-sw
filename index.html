@@ -5,105 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: -apple-system, sans-serif; margin: 0; padding: 2px; background: #f0f2f5; overflow-x: hidden; }
+        body { font-family: sans-serif; margin: 0; padding: 2px; background: #f0f2f5; overflow-x: hidden; }
         .nav-header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 5px; margin-bottom: 5px; border-radius: 8px; }
-        .btn-nav { background: #0088cc; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
-        
+        .btn-nav { background: #0088cc; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-size: 11px; }
         table { border-collapse: collapse; width: 100%; table-layout: fixed; background: white; }
-        th, td { border: 1px solid #eee; padding: 8px 1px; text-align: center; font-size: 11px; }
-        th { background: #f8f9fa; color: #333; }
-        
-        /* Colonna nomi strettissima */
-        .name-col { width: 55px; font-weight: bold; text-align: left; padding-left: 2px; background: #fff; overflow: hidden; text-overflow: ellipsis; }
-        
+        th, td { border: 1px solid #eee; padding: 12px 0; text-align: center; font-size: 11px; }
+        .name-col { width: 55px; font-weight: bold; text-align: left; padding-left: 3px; border-right: 2px solid #ddd; }
         .cell-u { background: #c6efce; color: #006100; font-weight: bold; }
         .cell-sw { background: #ddebf7; color: #1f4e78; font-weight: bold; }
-        
+        .cell-x { background: #ffeebb; color: #996600; font-weight: bold; }
+        .cell-j { background: #f2ccff; color: #6600cc; font-weight: bold; }
+        .cell-t { background: #ffd9d9; color: #990000; font-weight: bold; }
         .save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px; border-top: 1px solid #ccc; text-align: center; }
-        .btn-save { background: #34aa71; color: white; border: none; width: 95%; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 14px; }
+        .btn-save { background: #34aa71; color: white; border: none; width: 95%; padding: 12px; border-radius: 8px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="nav-header">
         <button class="btn-nav" onclick="cambiaSettimana(-7)">◀</button>
-        <div id="date-range" style="font-size: 11px; font-weight: bold;"></div>
+        <div id="date-range" style="font-weight: bold; font-size: 11px;"></div>
         <button class="btn-nav" onclick="cambiaSettimana(7)">▶</button>
     </div>
-
     <table>
         <thead><tr id="header-row"></tr></thead>
         <tbody id="table-body"></tbody>
     </table>
-
-    <div class="save-bar">
-        <button class="btn-save" onclick="inviaTutto()">💾 SALVA E CHIUDI</button>
-    </div>
-
+    <div class="save-bar"><button class="btn-save" onclick="inviaTutto()">💾 SALVA E CHIUDI</button></div>
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-        
+        const tg = window.Telegram.WebApp; tg.expand();
         const nomi = ["Michy", "Maury", "Claudia", "Morena", "Danilù"];
+        const stati = ["U", "SW", "X", "J", "T"];
         let dataCorrente = new Date();
-        // Vai al lunedì della settimana attuale
         dataCorrente.setDate(dataCorrente.getDate() - (dataCorrente.getDay() === 0 ? 6 : dataCorrente.getDay() - 1));
-        
-        let databasePC = {};
-        let urlParams = new URLSearchParams(window.location.search);
-        try {
-            let datiRaw = urlParams.get('dati');
-            if(datiRaw) databasePC = JSON.parse(decodeURIComponent(datiRaw));
-        } catch(e) {}
-
-        let modificheLocali = {}; 
-
+        let dbIniziale = {};
+        try { const p = new URLSearchParams(window.location.search); if(p.get('dati')) dbIniziale = JSON.parse(decodeURIComponent(p.get('dati'))); } catch(e){}
+        let modifiche = {};
         function rendering() {
-            const header = document.getElementById('header-row');
-            const body = document.getElementById('table-body');
-            header.innerHTML = '<th class="name-col">QTZ</th>';
-            body.innerHTML = '';
-
-            let fineSett = new Date(dataCorrente); fineSett.setDate(fineSett.getDate() + 4);
-            document.getElementById('date-range').innerText = dataCorrente.toLocaleDateString('it-IT',{day:'2-digit', month:'short'}) + " - " + fineSett.toLocaleDateString('it-IT',{day:'2-digit', month:'short'});
-
+            const h = document.getElementById('header-row'); const b = document.getElementById('table-body');
+            h.innerHTML = '<th class="name-col">QTZ</th>'; b.innerHTML = '';
+            let fine = new Date(dataCorrente); fine.setDate(fine.getDate() + 4);
+            document.getElementById('date-range').innerText = dataCorrente.toLocaleDateString('it-IT',{day:'numeric',month:'short'}) + " - " + fine.toLocaleDateString('it-IT',{day:'numeric',month:'short'});
             for(let i=0; i<5; i++) {
                 let d = new Date(dataCorrente); d.setDate(d.getDate() + i);
-                let dayLabel = d.toLocaleDateString('it-IT', {weekday:'short'}).substring(0,1).toUpperCase();
-                header.innerHTML += `<th>${dayLabel}<br>${d.getDate()}</th>`;
+                h.innerHTML += `<th>${d.toLocaleDateString('it-IT',{weekday:'short'}).charAt(0).toUpperCase()}<br>${d.getDate()}</th>`;
             }
-
             nomi.forEach(nome => {
                 let row = `<tr><td class="name-col">${nome}</td>`;
                 for(let i=0; i<5; i++) {
                     let d = new Date(dataCorrente); d.setDate(d.getDate() + i);
                     let dIso = d.toISOString().split('T')[0];
                     let key = nome + "_" + dIso;
-                    let stato = modificheLocali[key] || (databasePC[nome] && databasePC[nome][dIso]) || "U";
-                    let cl = stato === "U" ? "cell-u" : "cell-sw";
-                    row += `<td class="${cl}" onclick="toggle('${nome}', '${dIso}', this)">${stato}</td>`;
+                    let s = modifiche[key] || (dbIniziale[nome] && dbIniziale[nome][dIso]) || "U";
+                    row += `<td class="cell-${s.toLowerCase()}" onclick="ruota('${key}', this)">${s}</td>`;
                 }
-                row += "</tr>";
-                body.innerHTML += row;
+                b.innerHTML += row + "</tr>";
             });
         }
-
-        function toggle(nome, data, cell) {
-            let key = nome + "_" + data;
-            let n = cell.innerText === "U" ? "SW" : "U";
-            cell.innerText = n;
-            cell.className = n === "U" ? "cell-u" : "cell-sw";
-            modificheLocali[key] = n;
+        function ruota(k, c) {
+            let n = stati[(stati.indexOf(c.innerText) + 1) % stati.length];
+            c.innerText = n; c.className = "cell-" + n.toLowerCase(); modifiche[k] = n;
         }
-
         function cambiaSettimana(n) { dataCorrente.setDate(dataCorrente.getDate() + n); rendering(); }
-        
-        function inviaTutto() { 
-            if(Object.keys(modificheLocali).length > 0) {
-                tg.sendData(JSON.stringify(modificheLocali));
-            } else {
-                tg.close();
-            }
-        }
+        function inviaTutto() { tg.sendData(JSON.stringify(modifiche)); }
         rendering();
     </script>
 </body>
