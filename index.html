@@ -2,83 +2,115 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 10px; background: #f4f7f9; }
-        .nav-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .btn-nav { background: #0088cc; color: white; border: none; padding: 8px 15px; border-radius: 5px; font-weight: bold; }
-        .table-container { overflow-x: auto; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 10px; background: #f0f2f5; padding-bottom: 80px; }
+        .nav-header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 10px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .btn-nav { background: #0088cc; color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        
+        .table-container { background: white; border-radius: 12px; overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #eee; padding: 10px; text-align: center; }
-        th { background: #0088cc; color: white; }
-        .name-col { font-weight: bold; text-align: left; background: #f9f9f9; position: sticky; left: 0; }
-        .cell-u { background: #c6efce; color: #006100; font-weight: bold; }
-        .cell-sw { background: #ddebf7; color: #1f4e78; font-weight: bold; }
+        th, td { border: 1px solid #f0f0f0; padding: 12px 8px; text-align: center; min-width: 65px; }
+        th { background: #f8f9fa; color: #666; font-size: 0.75em; text-transform: uppercase; }
+        .name-col { font-weight: bold; text-align: left; background: white; position: sticky; left: 0; z-index: 2; border-right: 2px solid #eee; min-width: 80px; }
+        
+        .cell-u { background: #c6efce; color: #006100; font-weight: bold; cursor: pointer; }
+        .cell-sw { background: #ddebf7; color: #1f4e78; font-weight: bold; cursor: pointer; }
+        
+        .save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 15px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); text-align: center; z-index: 10; }
+        .btn-save { background: #34aa71; color: white; border: none; width: 90%; padding: 12px; border-radius: 10px; font-size: 1em; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
-    <div class="nav-controls">
-        <button class="btn-nav" onclick="cambiaSettimana(-1)">◀ Indietro</button>
-        <h3 id="current-month">Marzo 2026</h3>
-        <button class="btn-nav" onclick="cambiaSettimana(1)">Avanti ▶</button>
+    <div class="nav-header">
+        <button class="btn-nav" onclick="cambiaSettimana(-7)">◀</button>
+        <div id="date-range" style="font-weight: bold; font-size: 0.9em;">Caricamento...</div>
+        <button class="btn-nav" onclick="cambiaSettimana(7)">▶</button>
     </div>
 
     <div class="table-container">
         <table>
-            <thead>
-                <tr id="header-row">
-                    <th class="name-col">Nome</th>
-                    </tr>
-            </thead>
+            <thead><tr id="header-row"></tr></thead>
             <tbody id="table-body"></tbody>
         </table>
     </div>
 
+    <div class="save-bar">
+        <button class="btn-save" onclick="inviaTutto()">💾 Salva e Invia Riepilogo</button>
+    </div>
+
     <script>
         const tg = window.Telegram.WebApp;
+        tg.expand();
+        
         const nomi = ["Michy", "Maury", "Claudia", "Morena", "Danilù"];
-        let dataInizio = new Date(2026, 2, 2); // 2 Marzo 2026
+        // Iniziamo dal Lunedì della settimana corrente
+        let oggi = new Date();
+        let dataCorrente = new Date(oggi.setDate(oggi.getDate() - (oggi.getDay() === 0 ? 6 : oggi.getDay() - 1)));
+        
+        let modificheSessione = {}; 
 
-        function renderingTabella() {
-            const headerRow = document.getElementById('header-row');
-            const tableBody = document.getElementById('table-body');
-            headerRow.innerHTML = '<th class="name-col">Nome</th>';
-            tableBody.innerHTML = '';
+        function rendering() {
+            const header = document.getElementById('header-row');
+            const body = document.getElementById('table-body');
+            const rangeDisplay = document.getElementById('date-range');
+            
+            header.innerHTML = '<th class="name-col">TEAM QTZ</th>';
+            body.innerHTML = '';
 
-            // Genera 5 giorni lavorativi
-            let giorniSettimana = [];
+            let fineSett = new Date(dataCorrente);
+            fineSett.setDate(fineSett.getDate() + 4);
+            rangeDisplay.innerText = dataCorrente.toLocaleDateString('it-IT', {day:'numeric', month:'short'}) + " - " + fineSett.toLocaleDateString('it-IT', {day:'numeric', month:'short'});
+
+            // Intestazione giorni
             for(let i=0; i<5; i++) {
-                let d = new Date(dataInizio);
-                d.setDate(d.getDate() + i);
-                giorniSettimana.push(d.toLocaleDateString('it-IT', {day:'2-digit', weekday:'short'}));
-                headerRow.innerHTML += `<th>${giorniSettimana[i]}</th>`;
+                let d = new Date(dataCorrente); d.setDate(d.getDate() + i);
+                header.innerHTML += `<th>${d.toLocaleDateString('it-IT', {weekday:'short'}).toUpperCase()}<br>${d.getDate()}</th>`;
             }
 
+            // Righe colleghi
             nomi.forEach(nome => {
                 let row = `<tr><td class="name-col">${nome}</td>`;
                 for(let i=0; i<5; i++) {
-                    row += `<td class="cell-u" onclick="inviaModifica('${nome}', '${giorniSettimana[i]}', this)">U</td>`;
+                    let d = new Date(dataCorrente); d.setDate(d.getDate() + i);
+                    let dataKey = d.toISOString().split('T')[0];
+                    let idModifica = nome + "_" + dataKey;
+                    
+                    // Stato: se modificato in questa sessione usa quello, altrimenti default "U"
+                    let stato = modificheSessione[idModifica] || "U"; 
+                    let classe = stato === "U" ? "cell-u" : "cell-sw";
+                    
+                    row += `<td class="${classe}" onclick="toggle('${nome}', '${dataKey}', this)">${stato}</td>`;
                 }
                 row += "</tr>";
-                tableBody.innerHTML += row;
+                body.innerHTML += row;
             });
         }
 
-        function cambiaSettimana(direzione) {
-            dataInizio.setDate(dataInizio.getDate() + (direzione * 7));
-            renderingTabella();
+        function toggle(nome, data, cell) {
+            let nuovo = cell.innerText === "U" ? "SW" : "U";
+            cell.innerText = nuovo;
+            cell.className = nuovo === "U" ? "cell-u" : "cell-sw";
+            modificheSessione[nome + "_" + data] = nuovo;
         }
 
-        function inviaModifica(nome, giorno, cell) {
-            let nuovoStato = cell.innerText === "U" ? "SW" : "U";
-            cell.innerText = nuovoStato;
-            cell.className = nuovoStato === "U" ? "cell-u" : "cell-sw";
-            
-            tg.sendData(JSON.stringify({utente: nome, giorno: giorno, scelta: nuovoStato}));
+        function cambiaSettimana(offset) {
+            dataCorrente.setDate(dataCorrente.getDate() + offset);
+            rendering();
         }
 
-        renderingTabella();
+        function inviaTutto() {
+            const numModifiche = Object.keys(modificheSessione).length;
+            if (numModifiche === 0) {
+                tg.close();
+                return;
+            }
+            // Invia l'intero oggetto delle modifiche a Python
+            tg.sendData(JSON.stringify(modificheSessione));
+        }
+
+        rendering();
     </script>
 </body>
 </html>
