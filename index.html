@@ -1,67 +1,98 @@
 <!DOCTYPE html>
-
 <html>
-
 <head>
-
-    <script src=https://telegram.org/js/telegram-web-app.js></script>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; margin: 0; padding: 15px; color: #333; }
+        .header { text-align: center; padding: 10px; color: #0088cc; }
+        .card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .day-title { font-size: 1.2em; font-weight: bold; color: #0088cc; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        
+        .row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #f9f9f9; }
+        .row:last-child { border-bottom: none; }
+        .name { font-weight: 500; font-size: 1.1em; }
+        
+        .btn-group { display: flex; gap: 5px; }
+        button { border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        
+        .btn-u { background: #e8f5e9; color: #2e7d32; border: 1px solid #2e7d32; }
+        .btn-u.active { background: #2e7d32; color: white; }
+        
+        .btn-sw { background: #e3f2fd; color: #1565c0; border: 1px solid #1565c0; }
+        .btn-sw.active { background: #1565c0; color: white; }
 
-        body { font-family: sans-serif; text-align: center; background: #f4f4f4; padding: 20px; }
-
-        .day-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
-
-        .day { padding: 15px; border-radius: 8px; background: white; cursor: pointer; border: 1px solid #ddd; }
-
-        .sw { background: #4caf50; color: white; } /* Verde = Smart Working */
-
-        .office { background: #2196f3; color: white; } /* Blu = Ufficio */
-
+        .footer { text-align: center; font-size: 0.8em; color: #888; margin-top: 20px; }
     </style>
-
 </head>
-
 <body>
+    <div class="header">
+        <h2>📅 Turni Ufficio QTZ</h2>
+    </div>
 
-    <h2>📅 Calendario SW</h2>
+    <div id="calendar-container">
+        <div class="card">
+            <div class="day-title">
+                <span>Lunedì 2 Marzo</span>
+            </div>
+            
+            <div id="team-list">
+                <div class="row">
+                    <span class="name">Michy</span>
+                    <div class="btn-group">
+                        <button class="btn-u" onclick="select(this, 'U')">U</button>
+                        <button class="btn-sw" onclick="select(this, 'SW')">SW</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <span class="name">Maury</span>
+                    <div class="btn-group">
+                        <button class="btn-u" onclick="select(this, 'U')">U</button>
+                        <button class="btn-sw" onclick="select(this, 'SW')">SW</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <span class="name">Claudia</span>
+                    <div class="btn-group">
+                        <button class="btn-u" onclick="select(this, 'U')">U</button>
+                        <button class="btn-sw" onclick="select(this, 'SW')">SW</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <span class="name">Morena</span>
+                    <div class="btn-group">
+                        <button class="btn-u" onclick="select(this, 'U')">U</button>
+                        <button class="btn-sw" onclick="select(this, 'SW')">SW</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <span class="name">Danilù</span>
+                    <div class="btn-group">
+                        <button class="btn-u" onclick="select(this, 'U')">U</button>
+                        <button class="btn-sw" onclick="select(this, 'SW')">SW</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-    <p>Clicca sui giorni per cambiare stato</p>
-
-    <div class="day-grid" id="grid"></div>
+    <div class="footer">Seleziona U (Ufficio) o SW (Smart Working)</div>
 
     <script>
-
         const tg = window.Telegram.WebApp;
-
         tg.expand();
 
-        const grid = document.getElementById('grid');
-
-        for (let i = 1; i <= 31; i++) {
-
-            let d = document.createElement('div');
-
-            d.className = 'day';
-
-            d.innerText = i;
-
-            d.onclick = () => {
-
-                if (d.classList.contains('sw')) { d.className = 'day office'; }
-
-                else if (d.classList.contains('office')) { d.className = 'day'; }
-
-                else { d.className = 'day sw'; }
-
-            };
-
-            grid.appendChild(d);
-
+        function select(btn, type) {
+            // Rimuove attivo dagli altri bottoni nello stesso gruppo
+            const parent = btn.parentElement;
+            parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            // Attiva il bottone cliccato
+            btn.classList.add('active');
+            
+            // Invia il dato al bot Python (lo faremo nello step successivo)
+            console.log("Scelto:", type);
         }
-
     </script>
-
 </body>
-
 </html>
