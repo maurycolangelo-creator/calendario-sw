@@ -5,37 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 5px; background: #f0f2f5; padding-bottom: 80px; }
-        .nav-header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 8px; border-radius: 10px; margin-bottom: 10px; }
-        .btn-nav { background: #0088cc; color: white; border: none; padding: 5px 10px; border-radius: 5px; }
+        body { font-family: -apple-system, sans-serif; margin: 0; padding: 2px; background: #f0f2f5; overflow-x: hidden; }
+        .nav-header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 5px; margin-bottom: 5px; border-radius: 8px; }
+        .btn-nav { background: #0088cc; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; }
         
-        .table-container { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        table { border-collapse: collapse; width: 100%; table-layout: fixed; } /* Layout fisso per non tagliare */
-        th, td { border: 1px solid #f0f0f0; padding: 10px 2px; text-align: center; font-size: 0.85em; }
-        th { background: #f8f9fa; color: #666; height: 40px; }
-        .name-col { font-weight: bold; text-align: left; padding-left: 5px; width: 70px; font-size: 0.9em; }
+        table { border-collapse: collapse; width: 100%; table-layout: fixed; background: white; }
+        th, td { border: 1px solid #eee; padding: 8px 1px; text-align: center; font-size: 11px; }
+        th { background: #f8f9fa; color: #333; }
         
-        /* Celle più strette per far stare tutto */
+        /* Colonna nomi strettissima */
+        .name-col { width: 55px; font-weight: bold; text-align: left; padding-left: 2px; background: #fff; overflow: hidden; text-overflow: ellipsis; }
+        
         .cell-u { background: #c6efce; color: #006100; font-weight: bold; }
         .cell-sw { background: #ddebf7; color: #1f4e78; font-weight: bold; }
         
-        .save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px; border-top: 1px solid #ddd; }
-        .btn-save { background: #34aa71; color: white; border: none; width: 100%; padding: 12px; border-radius: 8px; font-weight: bold; }
+        .save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px; border-top: 1px solid #ccc; text-align: center; }
+        .btn-save { background: #34aa71; color: white; border: none; width: 95%; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 14px; }
     </style>
 </head>
 <body>
     <div class="nav-header">
         <button class="btn-nav" onclick="cambiaSettimana(-7)">◀</button>
-        <div id="date-range" style="font-weight: bold; font-size: 0.8em;"></div>
+        <div id="date-range" style="font-size: 11px; font-weight: bold;"></div>
         <button class="btn-nav" onclick="cambiaSettimana(7)">▶</button>
     </div>
 
-    <div class="table-container">
-        <table>
-            <thead><tr id="header-row"></tr></thead>
-            <tbody id="table-body"></tbody>
-        </table>
-    </div>
+    <table>
+        <thead><tr id="header-row"></tr></thead>
+        <tbody id="table-body"></tbody>
+    </table>
 
     <div class="save-bar">
         <button class="btn-save" onclick="inviaTutto()">💾 SALVA E CHIUDI</button>
@@ -46,16 +44,18 @@
         tg.expand();
         
         const nomi = ["Michy", "Maury", "Claudia", "Morena", "Danilù"];
-        let oggi = new Date();
-        let dataCorrente = new Date(oggi.setDate(oggi.getDate() - (oggi.getDay() === 0 ? 6 : oggi.getDay() - 1)));
+        let dataCorrente = new Date();
+        // Vai al lunedì della settimana attuale
+        dataCorrente.setDate(dataCorrente.getDate() - (dataCorrente.getDay() === 0 ? 6 : dataCorrente.getDay() - 1));
         
-        // Memoria locale dell'app
-        let turniSalvati = {}; 
+        let databasePC = {};
+        let urlParams = new URLSearchParams(window.location.search);
+        try {
+            let datiRaw = urlParams.get('dati');
+            if(datiRaw) databasePC = JSON.parse(decodeURIComponent(datiRaw));
+        } catch(e) {}
 
-        // Recuperiamo i dati dal bot all'avvio (se presenti)
-        if (tg.initDataUnsafe.start_param) {
-            // Vedremo nello step Python come passare i dati iniziali
-        }
+        let modificheLocali = {}; 
 
         function rendering() {
             const header = document.getElementById('header-row');
@@ -63,44 +63,47 @@
             header.innerHTML = '<th class="name-col">QTZ</th>';
             body.innerHTML = '';
 
-            // Titolo date
             let fineSett = new Date(dataCorrente); fineSett.setDate(fineSett.getDate() + 4);
-            document.getElementById('date-range').innerText = dataCorrente.toLocaleDateString('it-IT',{day:'numb', month:'short'}) + " - " + fineSett.toLocaleDateString('it-IT',{day:'numb', month:'short'});
+            document.getElementById('date-range').innerText = dataCorrente.toLocaleDateString('it-IT',{day:'2-digit', month:'short'}) + " - " + fineSett.toLocaleDateString('it-IT',{day:'2-digit', month:'short'});
 
             for(let i=0; i<5; i++) {
                 let d = new Date(dataCorrente); d.setDate(d.getDate() + i);
-                let dayName = d.toLocaleDateString('it-IT', {weekday:'short'}).substring(0,2).toUpperCase();
-                header.innerHTML += `<th>${dayName}<br>${d.getDate()}</th>`;
+                let dayLabel = d.toLocaleDateString('it-IT', {weekday:'short'}).substring(0,1).toUpperCase();
+                header.innerHTML += `<th>${dayLabel}<br>${d.getDate()}</th>`;
             }
 
             nomi.forEach(nome => {
                 let row = `<tr><td class="name-col">${nome}</td>`;
                 for(let i=0; i<5; i++) {
                     let d = new Date(dataCorrente); d.setDate(d.getDate() + i);
-                    let key = nome + "_" + d.toISOString().split('T')[0];
-                    let stato = turniSalvati[key] || "U";
-                    let classe = stato === "U" ? "cell-u" : "cell-sw";
-                    row += `<td class="${classe}" onclick="toggle('${key}', this)">${stato}</td>`;
+                    let dIso = d.toISOString().split('T')[0];
+                    let key = nome + "_" + dIso;
+                    let stato = modificheLocali[key] || (databasePC[nome] && databasePC[nome][dIso]) || "U";
+                    let cl = stato === "U" ? "cell-u" : "cell-sw";
+                    row += `<td class="${cl}" onclick="toggle('${nome}', '${dIso}', this)">${stato}</td>`;
                 }
                 row += "</tr>";
                 body.innerHTML += row;
             });
         }
 
-        function toggle(key, cell) {
-            let nuovo = cell.innerText === "U" ? "SW" : "U";
-            cell.innerText = nuovo;
-            cell.className = nuovo === "U" ? "cell-u" : "cell-sw";
-            turniSalvati[key] = nuovo;
+        function toggle(nome, data, cell) {
+            let key = nome + "_" + data;
+            let n = cell.innerText === "U" ? "SW" : "U";
+            cell.innerText = n;
+            cell.className = n === "U" ? "cell-u" : "cell-sw";
+            modificheLocali[key] = n;
         }
 
         function cambiaSettimana(n) { dataCorrente.setDate(dataCorrente.getDate() + n); rendering(); }
         
         function inviaTutto() { 
-            if(Object.keys(turniSalvati).length > 0) tg.sendData(JSON.stringify(turniSalvati));
-            else tg.close();
+            if(Object.keys(modificheLocali).length > 0) {
+                tg.sendData(JSON.stringify(modificheLocali));
+            } else {
+                tg.close();
+            }
         }
-
         rendering();
     </script>
 </body>
