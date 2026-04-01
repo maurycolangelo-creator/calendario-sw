@@ -1,73 +1,78 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 2px; background: #f0f2f5; overflow-x: hidden; }
-        .nav-header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 5px; margin-bottom: 5px; border-radius: 8px; }
-        .btn-nav { background: #0088cc; color: white; border: none; padding: 5px 8px; border-radius: 4px; font-size: 11px; }
+        body { font-family: sans-serif; margin: 0; padding: 2px; background: #f0f2f5; font-size: 10px; }
+        .nav-header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 5px; border-radius: 6px; margin-bottom: 5px; }
         table { border-collapse: collapse; width: 100%; table-layout: fixed; background: white; }
-        th, td { border: 1px solid #eee; padding: 12px 0; text-align: center; font-size: 11px; }
-        .name-col { width: 55px; font-weight: bold; text-align: left; padding-left: 3px; border-right: 2px solid #ddd; }
-        .cell-u { background: #c6efce; color: #006100; font-weight: bold; }
-        .cell-sw { background: #ddebf7; color: #1f4e78; font-weight: bold; }
-        .cell-x { background: #ffeebb; color: #996600; font-weight: bold; }
-        .cell-j { background: #f2ccff; color: #6600cc; font-weight: bold; }
-        .cell-t { background: #ffd9d9; color: #990000; font-weight: bold; }
-        .save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px; border-top: 1px solid #ccc; text-align: center; }
+        th, td { border: 1px solid #eee; padding: 12px 0; text-align: center; font-weight: bold; }
+        .name-col { width: 50px; text-align: left; padding-left: 2px; border-right: 2px solid #ddd; }
+        .cell-u { background: #c6efce; color: #006100; } .cell-sw { background: #ddebf7; color: #1f4e78; }
+        .cell-x { background: #ffeebb; color: #996600; } .cell-j { background: #f2ccff; color: #6600cc; }
+        .cell-t { background: #ffd9d9; color: #990000; }
+        .save-bar { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px; text-align: center; border-top: 1px solid #ccc; }
         .btn-save { background: #34aa71; color: white; border: none; width: 95%; padding: 12px; border-radius: 8px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="nav-header">
-        <button class="btn-nav" onclick="cambiaSettimana(-7)">◀</button>
-        <div id="date-range" style="font-weight: bold; font-size: 11px;"></div>
-        <button class="btn-nav" onclick="cambiaSettimana(7)">▶</button>
+        <button onclick="cambia(-7)">◀</button><div id="dr" style="font-size: 11px;"></div><button onclick="cambia(7)">▶</button>
     </div>
-    <table>
-        <thead><tr id="header-row"></tr></thead>
-        <tbody id="table-body"></tbody>
-    </table>
-    <div class="save-bar"><button class="btn-save" onclick="inviaTutto()">💾 SALVA E CHIUDI</button></div>
+    <table><thead><tr id="hr"></tr></thead><tbody id="tb"></tbody></table>
+    <div class="save-bar"><button class="btn-save" onclick="invia()">💾 SALVA E CHIUDI</button></div>
     <script>
         const tg = window.Telegram.WebApp; tg.expand();
-        const nomi = ["Michy", "Maury", "Claudia", "Morena", "Danilù"];
-        const stati = ["U", "SW", "X", "J", "T"];
-        let dataCorrente = new Date();
-        dataCorrente.setDate(dataCorrente.getDate() - (dataCorrente.getDay() === 0 ? 6 : dataCorrente.getDay() - 1));
+        const nomi = ["Michy", "Maury", "Claudia", "Morena", "Danilù"], stati = ["U", "SW", "X", "J", "T"];
+        let dataCorrente = new Date(); dataCorrente.setDate(dataCorrente.getDate() - (dataCorrente.getDay() === 0 ? 6 : dataCorrente.getDay() - 1));
+        
+        // --- QUESTA PARTE LEGGE I DATI DA GOOGLE ---
         let dbIniziale = {};
-        try { const p = new URLSearchParams(window.location.search); if(p.get('dati')) dbIniziale = JSON.parse(decodeURIComponent(p.get('dati'))); } catch(e){}
-        let modifiche = {};
-        function rendering() {
-            const h = document.getElementById('header-row'); const b = document.getElementById('table-body');
+        const urlParams = new URLSearchParams(window.location.search);
+        const datiRaw = urlParams.get('dati');
+        if (datiRaw) {
+            try { dbIniziale = JSON.parse(decodeURIComponent(datiRaw)); } catch(e) { console.error("Errore parsing dati"); }
+        }
+        
+        let mod = {};
+
+        function render() {
+            const h = document.getElementById('hr'), b = document.getElementById('tb');
             h.innerHTML = '<th class="name-col">QTZ</th>'; b.innerHTML = '';
-            let fine = new Date(dataCorrente); fine.setDate(fine.getDate() + 4);
-            document.getElementById('date-range').innerText = dataCorrente.toLocaleDateString('it-IT',{day:'numeric',month:'short'}) + " - " + fine.toLocaleDateString('it-IT',{day:'numeric',month:'short'});
-            for(let i=0; i<5; i++) {
-                let d = new Date(dataCorrente); d.setDate(d.getDate() + i);
-                h.innerHTML += `<th>${d.toLocaleDateString('it-IT',{weekday:'short'}).charAt(0).toUpperCase()}<br>${d.getDate()}</th>`;
+            let f = new Date(dataCorrente); f.setDate(f.getDate() + 4);
+            document.getElementById('dr').innerText = dataCorrente.toLocaleDateString('it-IT',{day:'2-digit',month:'short'}) + " - " + f.toLocaleDateString('it-IT',{day:'2-digit',month:'short'});
+            for(let i=0; i<5; i++) { 
+                let d2 = new Date(dataCorrente); d2.setDate(d2.getDate() + i); 
+                h.innerHTML += `<th>${d2.toLocaleDateString('it-IT',{weekday:'short'}).charAt(0).toUpperCase()}<br>${d2.getDate()}</th>`; 
             }
-            nomi.forEach(nome => {
-                let row = `<tr><td class="name-col">${nome}</td>`;
+            nomi.forEach(n => {
+                let r = `<tr><td class="name-col">${n}</td>`;
                 for(let i=0; i<5; i++) {
-                    let d = new Date(dataCorrente); d.setDate(d.getDate() + i);
-                    let dIso = d.toISOString().split('T')[0];
-                    let key = nome + "_" + dIso;
-                    let s = modifiche[key] || (dbIniziale[nome] && dbIniziale[nome][dIso]) || "U";
-                    row += `<td class="cell-${s.toLowerCase()}" onclick="ruota('${key}', this)">${s}</td>`;
+                    let d2 = new Date(dataCorrente); d2.setDate(d2.getDate() + i); 
+                    let iso = d2.toISOString().split('T')[0];
+                    let s = mod[n+"_"+iso] || (dbIniziale[n] && dbIniziale[n][iso]) || "U";
+                    r += `<td id="${n}_${iso}" class="cell-${s.toLowerCase()}" onclick="ruota('${n}','${iso}',this)">${s}</td>`;
                 }
-                b.innerHTML += row + "</tr>";
+                b.innerHTML += r + "</tr>";
             });
         }
-        function ruota(k, c) {
-            let n = stati[(stati.indexOf(c.innerText) + 1) % stati.length];
-            c.innerText = n; c.className = "cell-" + n.toLowerCase(); modifiche[k] = n;
+
+        function ruota(n, d, c) { 
+            let s2 = stati[(stati.indexOf(c.innerText) + 1) % stati.length]; 
+            c.innerText = s2; c.className = "cell-"+s2.toLowerCase(); 
+            mod[n+"_"+d] = s2; 
         }
-        function cambiaSettimana(n) { dataCorrente.setDate(dataCorrente.getDate() + n); rendering(); }
-        function inviaTutto() { tg.sendData(JSON.stringify(modifiche)); }
-        rendering();
+
+        function cambia(n) { dataCorrente.setDate(dataCorrente.getDate() + n); render(); }
+        
+        function invia() { 
+            // Invia solo le modifiche effettive a Telegram
+            if (Object.keys(mod).length === 0) { tg.close(); return; }
+            tg.sendData(JSON.stringify(mod)); 
+        }
+        
+        render();
     </script>
 </body>
 </html>
